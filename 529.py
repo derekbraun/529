@@ -19,12 +19,13 @@
     
 '''
 
+import os.path
 import random
 import csv
 
-path = '/'.join(__file__.split('/')[:-1])
-HISTORICAL_DATA         = path + '/historical_market_index_data.csv'
-OUTFILE_NAME            = path + '/histogram.pdf' 
+path = os.path.dirname(__file__)
+HISTORICAL_DATA         = os.path.join(path, 'historical_market_index_data.csv')
+OUTFILE_NAME            = os.path.join(path, 'histogram.pdf') 
 
 # choose the index you want to use for the simulation.
 # Options are 'DJIA' or 'Wilshire_5000'
