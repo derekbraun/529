@@ -28,8 +28,9 @@ HISTORICAL_DATA         = os.path.join(path, 'historical_market_index_data.csv')
 OUTFILE_NAME            = os.path.join(path, 'histogram.pdf') 
 
 # choose the index you want to use for the simulation.
-# Options are 'DJIA' or 'Wilshire_5000'
-INDEX                   = 'Wilshire_5000'
+# Options are: 'DJIA', 'Wilshire_5000', 'S&P500',
+#              '3_Month_Treasury', '10_Year_Treasury'
+INDEX                   = '10_Year_Treasury'
 SIMULATIONS             = 100000
 STARTING_INVESTMENT     = 20000.
 NUM_OF_YEARS            = 10
