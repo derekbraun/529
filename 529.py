@@ -75,7 +75,7 @@ MD_COUNTY_TAX_2014 = {  'Allegany County'       : .0305,
 # choose the index you want to use for the simulation.
 # Options are: 'DJIA', 'Wilshire_5000', 'S&P500',
 #              '3_Month_Treasury', '10_Year_Treasury'
-INDEX                   = '10_Year_Treasury'
+INDEX                   = 'Wilshire_5000'
 SIMULATIONS             = 100000
 STARTING_INVESTMENT     = 0.
 NUM_OF_YEARS            = 18
@@ -108,14 +108,28 @@ plan_1_results = []
 plan_2_results = []
 differences = []
 for i in range(SIMULATIONS):
-    investment1 = STARTING_INVESTMENT * (1 + PLAN_1_TAX_BENEFIT)
-    investment2 = STARTING_INVESTMENT * (1 + PLAN_2_TAX_BENEFIT)
+    investment1 = investment2 = STARTING_INVESTMENT
+    carryover_deductible1 = carryover_deductible2 = STARTING_INVESTMENT
     for year in range(NUM_OF_YEARS):
         performance = random.choice(historical_performances)
-        investment1 += (1 + PLAN_1_TAX_BENEFIT) * ANNUAL_INVESTMENT
-        investment1 += investment1 * (float(performance)-PLAN_1_EXPENSE_RATIO)
-        investment2 += (1 + PLAN_2_TAX_BENEFIT) * ANNUAL_INVESTMENT
-        investment2 += investment2 * (float(performance)-PLAN_2_EXPENSE_RATIO)
+        investment1 += ANNUAL_INVESTMENT
+        investment1 *= 1 + float(performance)-PLAN_1_EXPENSE_RATIO
+        
+        investment2 += ANNUAL_INVESTMENT
+        investment2 *= 1 + float(performance)-PLAN_2_EXPENSE_RATIO
+        
+        # now calculate and reinvest the tax benefit
+        # (really?? that's not going to happen, at least not automatically)
+        carryover_deductible1 += ANNUAL_INVESTMENT
+        deductible1 = 2500. if carryover_deductible1 > 2500. else carryover_deductible1
+        carryover_deductible1 -= deductible1
+        investment1 += deductible1*PLAN_1_TAX_BENEFIT
+        
+        carryover_deductible2 += ANNUAL_INVESTMENT
+        deductible2 = 2500. if carryover_deductible2 > 2500. else carryover_deductible2
+        carryover_deductible2 -= deductible2 
+        investment2 += deductible2*PLAN_2_TAX_BENEFIT
+              
     plan_1_results.append(investment1)
     plan_2_results.append(investment2)
     differences.append(investment2-investment1)
