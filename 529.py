@@ -71,95 +71,84 @@ MD_COUNTY_TAX_2014 = {  'Allegany County'       : .0305,
                         'Wicomico County'       : .0310,
                         'Worcester County'      : .0125}
 
+MD_EXPENSE_RATIO        = 0.0088
+VANGUARD_EXPENSE_RATIO  = 0.0019
 
-# choose the index you want to use for the simulation.
+class Scenario:
+    def __init__(self, name = None, starting_investment = None, annual_investment = None,
+                 expense_ratio = None, tax_benefit = None):
+        self.name = name
+        self.starting_investment = starting_investment
+        self.annual_investment = annual_investment
+        self.expense_ratio = expense_ratio
+        self.tax_benefit = tax_benefit
+        self.investment = None
+        self.carryover_deductible = None
+        self.results = []
+
+###############
+
+# Define models here.
+
+SIMULATIONS             = 100000
+NUM_OF_YEARS            = 18
+
+# for historical_index, choose the index you want to use for the simulation.
 # Options are: 'DJIA', 'Wilshire_5000', 'S&P500',
 #              '3_Month_Treasury', '10_Year_Treasury'
 INDEX                   = 'Wilshire_5000'
-SIMULATIONS             = 100000
-STARTING_INVESTMENT     = 0.
-NUM_OF_YEARS            = 18
-ANNUAL_INVESTMENT       = 2500.
-PLAN_1_EXPENSE_RATIO    = 0.0088
-PLAN_1_TAX_BENEFIT      = MD_STATE_TAX_2014['Couple']['$150,000+'] + \
-                          MD_COUNTY_TAX_2014['Montgomery County']
-PLAN_2_EXPENSE_RATIO    = 0.0019
-PLAN_2_TAX_BENEFIT      = 0.
 
-
+SCENARIOS = [Scenario(name                  = 'Maryland College Investment Plan',
+                      starting_investment   = 0.,
+                      annual_investment     = 2500.,
+                      expense_ratio         = MD_EXPENSE_RATIO,
+                      tax_benefit           = MD_STATE_TAX_2014['Couple']['$150,000+'] \
+                                              + MD_COUNTY_TAX_2014['Montgomery County']),
+             Scenario(name                  = 'Nevada Vanguard Plan',
+                      starting_investment   = 0.,
+                      annual_investment     = 2500.,
+                      expense_ratio         = VANGUARD_EXPENSE_RATIO,
+                      tax_benefit           = 0.)]
 
 # import historical market index data from csv file
 with open(HISTORICAL_DATA, 'rb') as csvfile:
     rows = csv.DictReader(csvfile)
-    historical_performances = [row[INDEX] for row in rows if row[INDEX] <> '']
-
-print '                   Starting Investment: ${STARTING_INVESTMENT:,.0f}\n'\
-      '           Annual Investment into Plan: ${ANNUAL_INVESTMENT:,.0f}\n'\
-      '                       Number of Years: {NUM_OF_YEARS} years\n'\
-      '                  Plan 1 Expense Ratio: {PLAN_1_EXPENSE_RATIO:.2%}\n'\
-      '                    Plan 1 Tax Benefit: {PLAN_1_TAX_BENEFIT:.2%}\n'\
-      '                  Plan 2 Expense Ratio: {PLAN_2_EXPENSE_RATIO:.2%}\n'\
-      '                    Plan 2 Tax Benefit: {PLAN_2_TAX_BENEFIT:.2%}\n'\
-      '                 Historical Index Used: {INDEX}\n\n'\
-      '                         Calculating... {SIMULATIONS:,} simulations'\
+    historical_performances = [float(row[INDEX]) for row in rows if row[INDEX] <> '']
+    
+print '                       Number of Years: {NUM_OF_YEARS} years\n'\
+      '                 Historical Index Used: {INDEX}\n'\
+      '                         Calculating... {SIMULATIONS:,} simulations\n'\
       ''.format(**locals())
 
-plan_1_results = []
-plan_2_results = []
-differences = []
 for i in range(SIMULATIONS):
-    investment1 = investment2 = STARTING_INVESTMENT
-    carryover_deductible1 = carryover_deductible2 = STARTING_INVESTMENT
+    for scenario in SCENARIOS:
+        scenario.investment = scenario.starting_investment
+        scenario.carryover_deductible = scenario.starting_investment
     for year in range(NUM_OF_YEARS):
         performance = random.choice(historical_performances)
-        investment1 += ANNUAL_INVESTMENT
-        investment1 *= 1 + float(performance)-PLAN_1_EXPENSE_RATIO
-        
-        investment2 += ANNUAL_INVESTMENT
-        investment2 *= 1 + float(performance)-PLAN_2_EXPENSE_RATIO
-        
-        # now calculate and reinvest the tax benefit
-        # (really?? that's not going to happen, at least not automatically)
-        carryover_deductible1 += ANNUAL_INVESTMENT
-        deductible1 = 2500. if carryover_deductible1 > 2500. else carryover_deductible1
-        carryover_deductible1 -= deductible1
-        investment1 += deductible1*PLAN_1_TAX_BENEFIT
-        
-        carryover_deductible2 += ANNUAL_INVESTMENT
-        deductible2 = 2500. if carryover_deductible2 > 2500. else carryover_deductible2
-        carryover_deductible2 -= deductible2 
-        investment2 += deductible2*PLAN_2_TAX_BENEFIT
-              
-    plan_1_results.append(investment1)
-    plan_2_results.append(investment2)
-    differences.append(investment2-investment1)
-plan_1_results.sort()
-plan_2_results.sort()
-differences.sort()
-
-
-# find the first positive number in the sorted results list.
-for i, result in enumerate(differences):
-    if result > 0:
-        likelihood = 1-i/float(len(differences))
-        break
-else:
-    likelihood = 0.
-
-print '            Plan 1 Median Final Amount: ${p1_median:,.0f} '\
-      '(95% HPD: ${p1_hpd_low:,.0f} to ${p1_hpd_high:,.0f})\n'\
-      '            Plan 2 Median Final Amount: ${p2_median:,.0f} '\
-      '(95% HPD: ${p2_hpd_low:,.0f} to ${p2_hpd_high:,.0f})\n'\
-      '                     Median Difference: ${diff_median:,.0f} '\
-      '(95% HPD: ${diff_hpd_low:,.0f} to ${diff_hpd_high:,.0f})\n'\
-      '   Likelihood that Plan 2 beats Plan 1: {likelihood:.2%}'\
-      ''.format(p1_median = plan_1_results[int(0.5*SIMULATIONS)],
-                p1_hpd_low = plan_1_results[int(0.025*SIMULATIONS)],
-                p1_hpd_high = plan_1_results[int(0.975*SIMULATIONS)],
-                p2_median = plan_2_results[int(0.5*SIMULATIONS)],
-                p2_hpd_low = plan_2_results[int(0.025*SIMULATIONS)],
-                p2_hpd_high = plan_2_results[int(0.975*SIMULATIONS)],
-                diff_median = differences[int(0.5*SIMULATIONS)],
-                diff_hpd_low = differences[int(0.025*SIMULATIONS)],
-                diff_hpd_high = differences[int(0.975*SIMULATIONS)],
-                likelihood = likelihood)
+        for scenario in SCENARIOS:
+            scenario.investment += scenario.annual_investment
+            scenario.investment *= 1 + performance-scenario.expense_ratio
+            # now calculate and reinvest the tax benefit (reinvestment is unrealistic)
+            scenario.carryover_deductible += scenario.annual_investment
+            if scenario.carryover_deductible > 2500:
+                deductible = 2500.
+            else:
+                deductible = scenario.carryover_deductible
+            scenario.carryover_deductible -= deductible
+            scenario.investment += deductible*scenario.tax_benefit
+    for scenario in SCENARIOS:
+        scenario.results.append(scenario.investment)
+for i, scenario in enumerate(SCENARIOS):
+    scenario.results.sort()
+    median = scenario.results[int(0.5*SIMULATIONS)]
+    hpd_low = scenario.results[int(0.025*SIMULATIONS)]
+    hpd_high = scenario.results[int(0.975*SIMULATIONS)]
+    print '                            Scenario {i}: {scenario.name}\n' \
+          '                         Expense Ratio: {scenario.expense_ratio:.2%}\n'\
+          '                     State Tax Benefit: {scenario.tax_benefit:.2%}\n'\
+          '                   Starting Investment: ${scenario.starting_investment:,.0f}\n'\
+          '           Annual Investment into Plan: ${scenario.annual_investment:,.0f}\n'\
+          '                   Median Final Amount: ${median:,.0f} '\
+          '(95% HPD: ${hpd_low:,.0f} to ${hpd_high:,.0f})\n'\
+          ''.format(**locals())
