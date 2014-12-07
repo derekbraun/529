@@ -20,7 +20,7 @@
 '''
 
 import os.path
-import random
+import numpy
 import csv
 
 path = os.path.dirname(__file__)
@@ -75,6 +75,10 @@ MD_EXPENSE_RATIO        = 0.0088
 VANGUARD_EXPENSE_RATIO  = 0.0019
 
 class Scenario:
+    '''
+        Convenient container for all of the variables needed to define each
+        scenario.
+    '''
     def __init__(self, name = None, starting_investment = None, annual_investment = None,
                  expense_ratio = None, tax_benefit = None):
         self.name = name
@@ -82,7 +86,8 @@ class Scenario:
         self.annual_investment = annual_investment
         self.expense_ratio = expense_ratio
         self.tax_benefit = tax_benefit
-        self.investment = None
+        # the remaining vars should not have initial values and are used as 
+        # part of the calculation algorithm
         self.carryover_deductible = None
         self.results = []
 
@@ -113,32 +118,31 @@ SCENARIOS = [Scenario(name                  = 'Maryland College Investment Plan'
 # import historical market index data from csv file
 with open(HISTORICAL_DATA, 'rb') as csvfile:
     rows = csv.DictReader(csvfile)
-    historical_performances = [float(row[INDEX]) for row in rows if row[INDEX] <> '']
+    historical_performances = numpy.array([float(row[INDEX]) for row in rows if row[INDEX] <> ''])
     
 print '                       Number of Years: {NUM_OF_YEARS} years\n'\
       '                 Historical Index Used: {INDEX}\n'\
       '                         Calculating... {SIMULATIONS:,} simulations\n'\
       ''.format(**locals())
 
-for i in range(SIMULATIONS):
+for scenario in SCENARIOS:
+    scenario.results = numpy.empty(SIMULATIONS)
+    scenario.results.fill(scenario.starting_investment)
+    scenario.carryover_deductible = scenario.starting_investment
+for year in range(NUM_OF_YEARS):
+    indices = numpy.random.randint(len(historical_performances), size=SIMULATIONS)
+    performances = historical_performances[indices]
     for scenario in SCENARIOS:
-        scenario.investment = scenario.starting_investment
-        scenario.carryover_deductible = scenario.starting_investment
-    for year in range(NUM_OF_YEARS):
-        performance = random.choice(historical_performances)
-        for scenario in SCENARIOS:
-            scenario.investment += scenario.annual_investment
-            scenario.investment *= 1 + performance-scenario.expense_ratio
-            # now calculate and reinvest the tax benefit (reinvestment is unrealistic)
-            scenario.carryover_deductible += scenario.annual_investment
-            if scenario.carryover_deductible > 2500:
-                deductible = 2500.
-            else:
-                deductible = scenario.carryover_deductible
-            scenario.carryover_deductible -= deductible
-            scenario.investment += deductible*scenario.tax_benefit
-    for scenario in SCENARIOS:
-        scenario.results.append(scenario.investment)
+        scenario.results += scenario.annual_investment
+        scenario.results *= 1 + performances-scenario.expense_ratio
+        # now calculate and reinvest the tax benefit (reinvestment is unrealistic)
+        scenario.carryover_deductible += scenario.annual_investment
+        if scenario.carryover_deductible > 2500:
+            deductible = 2500.
+        else:
+            deductible = scenario.carryover_deductible
+        scenario.carryover_deductible -= deductible
+        scenario.results += deductible*scenario.tax_benefit
 for i, scenario in enumerate(SCENARIOS):
     scenario.results.sort()
     median = scenario.results[int(0.5*SIMULATIONS)]
