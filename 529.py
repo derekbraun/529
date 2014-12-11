@@ -71,7 +71,21 @@ MD_COUNTY_TAX_2014 = {  'Allegany County'       : .0305,
                         'Wicomico County'       : .0310,
                         'Worcester County'      : .0125}
 
-MD_EXPENSE_RATIO        = 0.0088
+# 0.50% is the 2015 expense ratio of the global equity market index portfolio,
+# which is the only passive stock index investment fund in the MD plan. :-/ This
+# portfolio is not bad, except that it is missing emerging markets and global
+# small caps. It is similar to TSP split  C - 56%; S - 14%; I - 30%.
+# If we pick the target funds (which are actively managed and thus liable to do worse
+# than the Wilshire 5000), the 2015 expense ratio is 0.80%.
+# There are no passive bond investment funds in the MD plan. The closest is Inflation
+# Focused Bond Fund, which has a 2015 expense ratio of 0.68%. The
+# MD Bond/Income Fund contains a large number of junk bonds and its returns
+# are going to be highly correlated with equity returns; hence, it doesn't add anything
+# to a properly balanced and diversified portfolio.
+# An accurate simulation should support equity/bond splits with rebalancing and also
+# glide paths. 100% equities (stocks) until college age is very risky (just look at
+# the 95% HPDs) and not representative of most 529 plan investments.
+MD_EXPENSE_RATIO        = 0.0050
 VANGUARD_EXPENSE_RATIO  = 0.0019
 
 class Scenario:
@@ -80,12 +94,16 @@ class Scenario:
         scenario.
     '''
     def __init__(self, name = None, starting_investment = None, annual_investment = None,
-                 expense_ratio = None, tax_benefit = None):
+                 expense_ratio = None, tax_benefit = None, rollover_expense_ratio = None,
+                 rollover_year = None, rollover_tax_benefit = 0.):
         self.name = name
         self.starting_investment = starting_investment
         self.annual_investment = annual_investment
         self.expense_ratio = expense_ratio
         self.tax_benefit = tax_benefit
+        self.rollover_expense_ratio = rollover_expense_ratio
+        self.rollover_year = rollover_year
+        self.rollover_tax_benefit = rollover_tax_benefit
         # the remaining vars should not have initial values and are used as 
         # part of the calculation algorithm
         self.carryover_deductible = None
@@ -107,13 +125,22 @@ SCENARIOS = [Scenario(name                  = 'Maryland College Investment Plan'
                       starting_investment   = 0.,
                       annual_investment     = 2500.,
                       expense_ratio         = MD_EXPENSE_RATIO,
-                      tax_benefit           = MD_STATE_TAX_2014['Couple']['$150,000+'] \
+                      tax_benefit           = MD_STATE_TAX_2014['Couple']['$3,000'] \
                                               + MD_COUNTY_TAX_2014['Montgomery County']),
              Scenario(name                  = 'Nevada Vanguard Plan',
                       starting_investment   = 0.,
                       annual_investment     = 2500.,
                       expense_ratio         = VANGUARD_EXPENSE_RATIO,
-                      tax_benefit           = 0.)]
+                      tax_benefit           = 0.),
+             Scenario(name                  = 'MD with Y10 rollover',
+                      starting_investment   = 0.,
+                      annual_investment     = 2500.,
+                      expense_ratio         = MD_EXPENSE_RATIO,
+                      tax_benefit           = MD_STATE_TAX_2014['Couple']['$3,000'] \
+                                              + MD_COUNTY_TAX_2014['Montgomery County'],
+                      rollover_tax_benefit  = 0.,
+                      rollover_expense_ratio = VANGUARD_EXPENSE_RATIO,
+                      rollover_year         = 9)]
 
 # import historical market index data from csv file
 with open(HISTORICAL_DATA, 'rb') as csvfile:
@@ -143,6 +170,10 @@ for year in range(NUM_OF_YEARS):
             deductible = scenario.carryover_deductible
         scenario.carryover_deductible -= deductible
         scenario.results += deductible*scenario.tax_benefit
+        if scenario.rollover_year is not None and year == scenario.rollover_year:
+            # simulate rollover into less expensive plan
+            scenario.expense_ratio = scenario.rollover_expense_ratio
+            scenario.tax_benefit = scenario.rollover_tax_benefit
 for i, scenario in enumerate(SCENARIOS):
     scenario.results.sort()
     median = scenario.results[int(0.5*SIMULATIONS)]
