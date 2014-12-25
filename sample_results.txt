@@ -1,0 +1,25 @@
+derek@C02LX03SFD58:/Users/Derek/dev/529 $ ./529.py
+                       Number of Years: 18 years
+                 Historical Index Used: Wilshire_5000
+                         Calculating... 100,000 simulations
+
+                            Scenario 0: Maryland College Investment Plan
+                         Expense Ratio: 0.50%
+                     State Tax Benefit: 7.95%
+                   Starting Investment: $0
+           Annual Investment into Plan: $2,500
+                   Median Final Amount: $110,149 (95% HPD: $40,156 to $265,685)
+
+                            Scenario 1: Nevada Vanguard Plan
+                         Expense Ratio: 0.19%
+                     State Tax Benefit: 0.00%
+                   Starting Investment: $0
+           Annual Investment into Plan: $2,500
+                   Median Final Amount: $106,060 (95% HPD: $38,365 to $257,152)
+
+                            Scenario 2: MD with Y10 rollover
+                         Expense Ratio: 0.19%
+                     State Tax Benefit: 0.00%
+                   Starting Investment: $0
+           Annual Investment into Plan: $2,500
+                   Median Final Amount: $110,216 (95% HPD: $39,620 to $268,076)
